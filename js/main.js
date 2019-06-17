@@ -89,7 +89,7 @@ function start() {
 
     var texture = gl.createTexture();
     texture.image = new Image();
-    texture.image.src = "images/Rocks02_col.jpg";
+    texture.image.src = "textures/rock.jpg";
 
     texture.image.onload = function () {
         gl.bindTexture(gl.TEXTURE_2D, texture);
