@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>WebGL_Tutorial</title>
+    <link href="css/default.css" rel="stylesheet" />
+    <script src="js/gl-matrix.js"></script>
+    <script src="js/shader.js"></script>
+    <script src="js/camera.js"></script>
+</head>
+<body>
+    <div>My first WebGL project</div>
+    <canvas id="renderCanvas" width="960" height="540"></canvas>
+    <script src="js/main.js"></script>
+
+    <script id="mainVertShader" type="vertShader">
+        #version 300 es
+
+        in vec3 position;
+        in vec3 normal;
+        in vec2 texCoord;
+
+        uniform mat4 uProjection;
+        uniform mat4 uView;
+        uniform mat4 uModel;
+
+        out vec3 fragPos;
+        out vec2 fragCoord;
+        out vec3 fragNorm;
+
+        void main() {
+            gl_Position = uProjection * uView * uModel * vec4(position, 1.0);
+            fragPos = position;
+            fragNorm = normal;
+            fragCoord = texCoord;
+        }
+    </script>
+
+    <script id="mainFragShader" type="fragShader">
+        #version 300 es
+        precision mediump float;
+   
+        in vec3 fragPos;
+        in vec2 fragCoord;
+        in vec3 fragNorm;
+
+        uniform sampler2D uTexture;
+        uniform vec3 uLight;
+
+        out vec4 finalColor;
+
+        void main() {
+            float v = dot(normalize(uLight - fragPos), fragNorm);
+            v = (v * 0.5f) + 0.5f;
+            vec3 texColor = texture(uTexture, fragCoord).xyz;
+            vec3 ambientColor = vec3(0.2f, 0.2f, 0.2f);
+            finalColor = vec4(texColor * v, 1.0f);
+        }
+    </script>
+</body>
+</html>
