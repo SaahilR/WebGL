@@ -22,6 +22,12 @@ document.addEventListener("keydown", function (event) {
     if (event.key == 'd') {
         keys['d'] = true;
     }
+    if (event.key == ' ') {
+        keys[' '] = true;
+    }
+    if (event.key == 16) {
+        keys[16] == true;
+    }
 });
 
 document.addEventListener("keyup", function (event) {
@@ -36,6 +42,12 @@ document.addEventListener("keyup", function (event) {
     }
     if (event.key == 'd') {
         keys['d'] = false;
+    }
+    if (event.key == ' ') {
+        keys[' '] = false;
+    }
+    if (event.key == 16) {
+        keys[16] == false;
     }
 });
 
@@ -64,6 +76,14 @@ function processMovement(viewMatrix) {
     }
     if (keys['d'] == true) {
         vec3.scale(lookDir, camera.right, 0.05);
+        vec3.add(camera.position, camera.position, lookDir);
+    }
+    if (keys[' '] == true) {
+        vec3.scale(lookDir, [0, 1, 0], 0.05);
+        vec3.add(camera.position, camera.position, lookDir);
+    }
+    if (keys[16] == true) {
+        vec3.scale(lookDir, [0, 1, 0], -0.05);
         vec3.add(camera.position, camera.position, lookDir);
     }
 

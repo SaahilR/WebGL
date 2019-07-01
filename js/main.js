@@ -36,6 +36,9 @@ function start() {
     function processMouse(e) {
         camera.pitch += -0.005 * e.movementY;
         camera.yaw += 0.005 * e.movementX;
+
+        if (camera.pitch > Math.PI / 2) camera.pitch = Math.PI / 2;
+        if (camera.pitch < -Math.PI / 2) camera.pitch = -Math.PI / 2;
     }
 
     var cubeVertices = [
@@ -87,21 +90,9 @@ function start() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
 
-    var texture = gl.createTexture();
-    texture.image = new Image();
-    texture.image.src = "textures/rock.jpg";
-
-    texture.image.onload = function () {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, texture.image);
-    
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
- //       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_ANISOTROPY, 2);
-        gl.generateMipmap(gl.TEXTURE_2D);
-    }
+    var albedo_texture = loadTexture("textures/rock_albedo.jpg");
+    var normal_texture = loadTexture("textures/rock_normal.jpg");
+    var disp_texture = loadTexture("textures/rock_disp.jpg");
 
     // Shader Setup
     var shaderProgram = setupShader("mainVertShader", "mainFragShader");
@@ -136,28 +127,27 @@ function start() {
     mat4.lookAt(viewMatrix, camera.position, camera.look, camera.up);
     mat4.translate(viewMatrix, viewMatrix, [0.5, 0.0, 0.0]);
 
-    var projectionMatrixLocation = gl.getUniformLocation(shaderProgram, "uProjection");
-    var viewMatrixLocation = gl.getUniformLocation(shaderProgram, "uView");
-    var modelMatrixLocation = gl.getUniformLocation(shaderProgram, "uModel");
-
-    var samplerLocation = gl.getUniformLocation(shaderProgram, "uTexture");
-    var lightLocation = gl.getUniformLocation(shaderProgram, "uLight");
-
     gl.useProgram(shaderProgram);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.uniform1i(samplerLocation, 0);
+    gl.bindTexture(gl.TEXTURE_2D, albedo_texture);
+    setShader1i(shaderProgram, "uAlbedo", 0);
 
-    gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
-    gl.uniform3fv(lightLocation, [5.0, 10.0, 3.0]);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, normal_texture);
+    setShader1i(shaderProgram, "uNormal", 1);
+
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, disp_texture);
+    setShader1i(shaderProgram, "uDisp", 2);
+
+    setShader3fv(shaderProgram, "uLight", -2, 10, -5)
     
-    var time = 0;
-
     gl.enable(gl.DEPTH_TEST);
 
-    requestAnimationFrame(runRenderLoop);
+    var lightPos = [0.0, 0.0, 0.0];
 
-    function runRenderLoop() {
+    requestAnimationFrame(runRenderLoop);
+    function runRenderLoop(time) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.clearColor(0.5, 0.5, 1.0, 1.0);
         
@@ -167,14 +157,16 @@ function start() {
         mat4.translate(modelMatrix, modelMatrix, [5.0, 0.0, 0.0]);
         //mat4.rotate(modelMatrix, modelMatrix, time, [0.0, 1.0, 0.7]);
         processMovement(viewMatrix);
-        time += 0.01;
 
         // Pass matrices values to shader
-        gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
-        gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
-        gl.uniformMatrix4fv(modelMatrixLocation, false, modelMatrix);
-
+        setShaderMat4fv(shaderProgram, "uProjection", projectionMatrix);
+        setShaderMat4fv(shaderProgram, "uView", viewMatrix);
+        setShaderMat4fv(shaderProgram, "uModel", modelMatrix);
         
+        setShader3fv(shaderProgram, "camPos", camera.position);
+
+        setShader3fv(shaderProgram, "uLight", 2.0 * Math.sin(0.003 * time), 10.0, 2.0 * Math.cos(0.003 * time));
+
         // Start drawing proccess
         gl.useProgram(shaderProgram);
         gl.bindVertexArray(vao);

@@ -42,8 +42,31 @@ function setupShader(vertShaderId, fragShaderId) {
 }
 
 // Following functions simplify adding uniform values to shaders
-function setShaderMat4fv(shaderProgram, uniformName, v0) {
-    uniformLocations[uniformName] = gl.getUniformLocation(shaderProgram, uniformName);
+function getLocation(shaderProgram, uniformName) {
+    var location;
 
-    gl.uniformMatrix4fv(v0Location, false, v0);
+    if (uniformLocations[uniformName]) {
+        location = uniformLocations[uniformName];
+    } else {
+        uniformLocations[uniformName] = gl.getUniformLocation(shaderProgram, uniformName);
+        location = uniformLocations[uniformName];
+    }
+
+    return location;
 }
+
+function setShaderMat4fv(shaderProgram, uniformName, v0) {
+    var location = getLocation(shaderProgram, uniformName);
+    gl.uniformMatrix4fv(location, false, v0);
+}
+
+function setShader3fv(shaderProgram, uniformName, v0, v1, v2) {
+    var location = getLocation(shaderProgram, uniformName);
+    gl.uniform3fv(location, [v0, v1, v2]);
+}
+
+function setShader1i(shaderProgram, uniformName, v0) {
+    var location = getLocation(shaderProgram, uniformName);
+    gl.uniform1i(location, v0);
+}
+

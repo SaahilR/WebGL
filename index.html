@@ -7,17 +7,16 @@
     <script src="js/gl-matrix.js"></script>
     <script src="js/shader.js"></script>
     <script src="js/camera.js"></script>
+    <script src="js/texture.js"></script>
 </head>
 <body>
     <h2>Example WebGL Application</h2>
-    <body>
-        Controls:
-        <p>
-        WASD - Move<br/>
-        Mouse - Look<br/>
-        </p>
-    </body>
-    
+    Controls:
+    <p>
+    WASD - Move<br/>
+    Mouse - Look<br/>
+    </p>
+
     <canvas id="renderCanvas" width="960" height="540"></canvas>
     <script src="js/main.js"></script>
 
@@ -34,12 +33,20 @@
 
         out vec3 fragPos;
         out vec2 fragCoord;
-        out vec3 fragNorm;
+        out vec3 fragNormal;
+        out vec3 fragTangent;
+        out vec3 fragBitangent;
 
         void main() {
             gl_Position = uProjection * uView * uModel * vec4(position, 1.0);
             fragPos = position;
-            fragNorm = normal;
+            
+            vec3 tangent = cross(normal, vec3(0.0f, 1.0f, 0.0f));
+            if(length(tangent) == 0.0f) tangent = cross(normal, vec3(0.0f, 0.0f, 1.0f));
+
+            fragTangent = normalize(tangent);
+            fragBitangent = normalize(cross(normal, tangent)); 
+            fragNormal = normal;
             fragCoord = texCoord;
         }
     </script>
@@ -50,19 +57,68 @@
    
         in vec3 fragPos;
         in vec2 fragCoord;
-        in vec3 fragNorm;
+        in vec3 fragNormal;
+        in vec3 fragTangent;
+        in vec3 fragBitangent;
 
-        uniform sampler2D uTexture;
+        uniform sampler2D uAlbedo;
+        uniform sampler2D uNormal;
+        uniform sampler2D uDisp;
+
         uniform vec3 uLight;
-
+        uniform vec3 camPos;
         out vec4 finalColor;
 
+        
+        
+        vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir, sampler2D depthTex) {
+            float minLayers = 5.0f;
+            float maxLayers = 10.0f;
+
+            float numLayers = mix(minLayers, maxLayers, abs(dot(vec3(0, 0, 1), viewDir)));
+            float layerDepth = 1.0f / numLayers;
+            float currentLayerDepth = 0.0f;
+            vec2 P = viewDir.xy * 0.03f / viewDir.z;
+            vec2 deltaTexCoords = P / numLayers;
+
+            vec2 currentTexCoords = texCoords;
+            float currentDepthMapValue = texture(depthTex, currentTexCoords).r;
+
+            while(currentLayerDepth < currentDepthMapValue) {
+                currentTexCoords -= deltaTexCoords;
+                currentDepthMapValue = texture(depthTex, currentTexCoords).r;
+                currentLayerDepth += layerDepth;
+            }
+            vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+            float afterDepth  = currentDepthMapValue - currentLayerDepth;
+            float beforeDepth = texture(depthTex, prevTexCoords).r - currentLayerDepth + layerDepth;
+
+            float weight = afterDepth / (afterDepth - beforeDepth);
+            vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0f - weight);
+
+            return finalTexCoords;
+        }
+        
         void main() {
-            float v = dot(normalize(uLight - fragPos), fragNorm);
-            v = (v * 0.5f) + 0.5f;
-            vec3 texColor = texture(uTexture, fragCoord).xyz;
+            vec3 V = normalize(camPos - fragPos);
+
+            vec3 T = fragTangent;
+            vec3 B = fragBitangent;
+            vec3 N = fragNormal;
+            mat3 TBN = mat3(T, B, N);
+            //vec3 TBNV = normalize(TBN * V);
+            //vec2 uv = ParallaxMapping(fragCoord, TBNV, uDisp);
+
+            vec3 texNorm = texture(uNormal, fragCoord).xyz;
+            vec3 TBN_Normal = TBN * texNorm;
+        
+            float normalLight = dot(normalize(uLight - fragPos), TBN_Normal);
+            normalLight = (normalLight * 0.5f) + 0.5f;
+        
+            vec3 texAlbedo = texture(uAlbedo, fragCoord).xyz;
             vec3 ambientColor = vec3(0.2f, 0.2f, 0.2f);
-            finalColor = vec4(texColor * v, 1.0f);
+            finalColor = vec4(texAlbedo * normalLight, 1.0f);
         }
     </script>
 </body>
