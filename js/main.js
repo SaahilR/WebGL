@@ -26,16 +26,24 @@ function start() {
         if (document.pointerLockElement === canvas ||
             document.mozPointerLockElement === canvas) {
             console.log('The pointer lock status is now locked');
-            document.addEventListener("mousemove", processMouse, false);
+            canvas.addEventListener("mousemove", processMouse, false);
         } else {
             console.log('The pointer lock status is now unlocked');
-            document.removeEventListener("mousemove", processMouse, false);
+            canvas.removeEventListener("mousemove", processMouse, false);
         }
     }
 
+    old_x = 0;
+    old_y = 0;
+
     function processMouse(e) {
-        camera.pitch += -0.005 * e.movementY;
-        camera.yaw += 0.005 * e.movementX;
+        dx = (e.clientX - start_of_mouse_drag.clientX); //* 2 * Math.PI / canvas.width;
+        dy = (e.clientY - start_of_mouse_drag.clientY); //* 2 * Math.PI / canvas.height;
+        camera.pitch += -0.005 * dx;
+        camera.yaw += 0.005 * dy;
+
+        //old_x = e.pageX;
+        //old_y = e.pageY;
 
         if (camera.pitch > Math.PI / 2) camera.pitch = Math.PI / 2;
         if (camera.pitch < -Math.PI / 2) camera.pitch = -Math.PI / 2;
@@ -155,7 +163,7 @@ function start() {
         mat4.identity(modelMatrix);
 
         mat4.translate(modelMatrix, modelMatrix, [5.0, 0.0, 0.0]);
-        //mat4.rotate(modelMatrix, modelMatrix, time, [0.0, 1.0, 0.7]);
+        //mat4.rotate(modelMatrix, modelMatrix, 0.001 * time, [0.0, 1.0, 0.7]);
         processMovement(viewMatrix);
 
         // Pass matrices values to shader
